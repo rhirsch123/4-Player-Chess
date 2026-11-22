@@ -145,18 +145,21 @@ void get_legal_moves(Position& position, MoveList* move_list) {
 
 
 uint64_t perft(Position& position, int depth) {
-    uint64_t nodes = 0;
-    
+    if (depth == 0) {
+        return 1;
+    }
+
     MoveList moves;
     get_legal_moves(position, &moves);
 
-    if (position.half_moves == depth - 1) {
+    if (depth == 1) {
         return moves.size;
     }
 
+    uint64_t nodes = 0;
     for (Move move : moves) {
         position.make_move(move);
-        nodes += perft(position, depth);
+        nodes += perft(position, depth - 1);
         position.pop();
     }
 
