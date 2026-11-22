@@ -18,7 +18,6 @@ struct PositionState {
     uint32_t castle_rights;
     int king_squares[4];
     int material[4];
-    int ep_square;
     int fifty_move_count;
 };
 
@@ -45,6 +44,10 @@ public:
     int material(int color) {
         return state->material[color];
     }
+
+    bool attacked_by(int square, int team);
+    bool in_check(int color);
+    bool in_check();
 
     void make_move(Move move);
     void pop();

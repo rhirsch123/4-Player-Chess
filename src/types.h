@@ -121,4 +121,38 @@ constexpr CastleRights castle_by_color[4][2] = {
     {GREEN_KINGSIDE,  GREEN_QUEENSIDE}
 };
 
+static constexpr int castle_step[4] = { 1, -14, -1, 14 };
+
+static inline bool valid_square(int row, int col) {
+    return row >= 0 && row < 14 && col >= 0 && col < 14 &&
+        ((row >= 3 && row <= 10) || (col >= 3 && col <= 10));
+}
+
+static inline bool valid_square(int square) {
+    return square >= 0 && square < 196 && valid_square(square / 14, square % 14);
+}
+
+static inline bool valid_step(int from, int to) {
+    int col_diff = std::abs(to % 14 - from % 14);
+    return valid_square(to) && col_diff <= 2;
+}
+
+static inline int get_square(int row, int col) {
+    return row * 14 + col;
+}
+
+// which direction is forward for each color
+static constexpr int row_dirs[4] = { -1, 0, 1, 0 };
+static constexpr int col_dirs[4] = { 0, 1, 0, -1 };
+
+// indexed by piece type, end marked by 0
+static constexpr int move_offsets[6][8] = {
+    {},
+    { -29, -27, -16, -12, 12, 16, 27, 29 }, // knight
+    { -15, -13, 13, 15, 0, 0, 0, 0},        // bishop
+    { -14, -1, 1, 14, 0, 0, 0, 0 },         // rook
+    { -15, -14, -13, -1, 1, 13, 14, 15 },   // queen
+    { -15, -14, -13, -1, 1, 13, 14, 15 }    // king
+};
+
 #endif

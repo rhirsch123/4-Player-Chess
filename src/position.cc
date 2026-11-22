@@ -63,7 +63,6 @@ void Position::set_fen(std::string fen) {
     std::memset(state->board, 0, sizeof(state->board));
     std::memset(state->material, 0, sizeof(state->material));
     state->castle_rights = 0;
-    state->ep_square = -1;
 
     switch (fields[0][0]) {
         case 'R': turn = RED;    break;
@@ -122,7 +121,7 @@ void Position::set_fen(std::string fen) {
             }
 
             int piece = color * 6 + type + 1;
-            int square = row * 14 + col;
+            int square = get_square(row, col);
 
             if (type == KING) {
                 state->king_squares[color] = square;
@@ -155,6 +154,68 @@ Position::Position(std::string fen) {
 }
 
 
+bool Position::attacked_by(int square, int team) {
+    int row = square / 14;
+    int col = square % 14;
+
+    for (int color = RED; color <= GREEN; color++) {
+        if (get_team(color) != team) {
+            continue;
+        }
+
+        for (int side = -1; side <= 1; side += 2) {
+            int from_row = row - row_dirs[color] + (row_dirs[color] == 0 ? side : 0);
+            int from_col = col - col_dirs[color] + (col_dirs[color] == 0 ? side : 0);
+            if (valid_square(from_row, from_col) && state->board[get_square(from_row, from_col)] == color * 6 + PAWN + 1) {
+                return true;
+            }
+        }
+    }
+
+    for (int type = KNIGHT; type <= ROOK; type++) {
+        for (int offset : move_offsets[type]) {
+            if (!offset) {
+                break;
+            }
+
+            int prev = square;
+            int cur = square + offset;
+            while (valid_step(prev, cur)) {
+                int piece = state->board[cur];
+                if (piece) {
+                    if (get_team(get_color(piece)) == team) {
+                        int attacker_type = get_piece_type(piece);
+                        if (attacker_type == type ||
+                            (attacker_type == QUEEN && type != KNIGHT) ||
+                            (attacker_type == KING && cur == square + offset && type != KNIGHT)) {
+                            return true;
+                        }
+                    }
+                    break;
+                }
+
+                if (type == KNIGHT) {
+                    break;
+                }
+
+                prev = cur;
+                cur += offset;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool Position::in_check(int color) {
+    return attacked_by(state->king_squares[color], !get_team(color));
+}
+
+bool Position::in_check() {
+    return in_check(turn);
+}
+
+
 void Position::make_move(Move move) {
     half_moves++;
     if (half_moves >= stack.size()) {
@@ -163,7 +224,67 @@ void Position::make_move(Move move) {
     std::memcpy(&stack[half_moves], &stack[half_moves - 1], sizeof(PositionState));
     state = &stack[half_moves];
 
-    // TODO
+    const int from = move.from();
+    const int to = move.to();
+    const int piece = state->board[from];
+    const int color = get_color(piece);
+    const int piece_type = get_piece_type(piece);
+
+    static constexpr int king_home[4] = { 189, 84, 6, 111 };
+
+    int captured = state->board[to];
+    int capture_square = to;
+
+    if (captured) {
+        int enemy = get_color(captured);
+        state->material[enemy] -= piece_values[get_piece_type(captured)];
+    }
+
+    state->board[from] = 0;
+    state->board[to] = piece;
+
+    if (piece_type == KING) {
+        state->king_squares[color] = to;
+        state->castle_rights &= ~(castle_by_color[color][0] | castle_by_color[color][1]);
+
+        if (from == king_home[color] && (to == from + 2 * castle_step[color] ||
+                                         to == from - 2 * castle_step[color])) {
+            int direction = to == from + 2 * castle_step[color] ? castle_step[color] : -castle_step[color];
+            int rook_from = from + (direction == castle_step[color] ? 3 : 4) * direction;
+            int rook_to = from + direction;
+            state->board[rook_to] = state->board[rook_from];
+            state->board[rook_from] = 0;
+        }
+    }
+
+    // update castle rights
+    for (int c = RED; c <= GREEN; c++) {
+        int kingside_rook = king_home[c] + 3 * castle_step[c];
+        int queenside_rook = king_home[c] - 4 * castle_step[c];
+
+        if (from == kingside_rook || (capture_square == kingside_rook && captured)) {
+            state->castle_rights &= ~castle_by_color[c][0];
+        }
+        if (from == queenside_rook || (capture_square == queenside_rook && captured)) {
+            state->castle_rights &= ~castle_by_color[c][1];
+        }
+    }
+
+    if (piece_type == PAWN) {
+        int promoted = move.get_promotion();
+        if (promoted) {
+            state->board[to] = color * 6 + promoted + 1;
+            state->material[color] += piece_values[promoted] - piece_values[PAWN];
+        }
+    }
+
+    if (piece_type == PAWN || captured) {
+        state->fifty_move_count = 0;
+    } else {
+        state->fifty_move_count++;
+    }
+
+    turn = next_color(turn);
 }
 
 
