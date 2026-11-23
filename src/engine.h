@@ -10,7 +10,10 @@ public:
     Engine();
     void init();
 
-    int evaluation(Position& position);
+    float evaluation_base(Position& position);
+    float evaluation_v1(Position& position);
+    float evaluation_v2(Position& position);
+    float evaluation_v3(Position& position);
     void make_move(Position& position, Move move, int ply);
     void unmake_move(Position& position);
 
