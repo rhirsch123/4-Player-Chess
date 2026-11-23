@@ -7,14 +7,14 @@
 #include "types.h"
 
 class Move {
-    uint8_t from_square;
-    uint8_t to_square;
-    uint8_t promotion;
+    Square from_square;
+    Square to_square;
+    PieceType promotion;
 
 public:
-    Move() : from_square(0), to_square(0), promotion(0) {}
+    Move() : from_square(0), to_square(0), promotion(PAWN) {}
 
-    Move(uint8_t from, uint8_t to, uint8_t promotion = 0)
+    Move(Square from, Square to, PieceType promotion = PAWN)
         : from_square(from), to_square(to), promotion(promotion) {}
 
     Move(const std::string& uci_move) {

@@ -8,9 +8,14 @@
 #define MATE_SCORE 32000
 #define SCORE_NONE 32001
 #define MAX_DEPTH 64 // max search depth
+// TODO: actually calculate this value, 512 feels more than large enough, get exact lower bounds
 #define MAX_MOVES 512 // max legal moves for one position
 
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> time_point;
+
+// squares are indexes on 14x14 grid
+typedef uint8_t Square;
+#define SQUARE_NONE 255
 
 struct SearchInfo {
     // in milliseconds
@@ -100,6 +105,10 @@ static inline int last_color(int color) {
 
 static inline int get_team(int color) {
     return color % 2;
+}
+
+static inline int other_team(int team) {
+    return !team;
 }
 
 

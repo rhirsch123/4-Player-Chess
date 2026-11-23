@@ -66,10 +66,10 @@ void Position::set_fen(std::string fen) {
     state->ep_square = -1;
 
     switch (fields[0][0]) {
-        case 'R': turn = RED;    break;
-        case 'B': turn = BLUE;   break;
-        case 'Y': turn = YELLOW; break;
-        case 'G': turn = GREEN;  break;
+        case 'R': player_to_move = RED;    break;
+        case 'B': player_to_move = BLUE;   break;
+        case 'Y': player_to_move = YELLOW; break;
+        case 'G': player_to_move = GREEN;  break;
         default:
             throw std::invalid_argument("Invalid FEN4");
     }
@@ -169,5 +169,5 @@ void Position::make_move(Move move) {
 
 void Position::pop() {
     state = &stack[--half_moves];
-    turn = last_color(turn);
+    player_to_move = last_color(player_to_move);
 }
