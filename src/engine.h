@@ -14,7 +14,7 @@ public:
     void make_move(Position& position, Move move, int ply);
     void unmake_move(Position& position);
 
-    int negamax(Position& position, int remaining_depth, int current_depth, int alpha, int beta);
+    int negamax(Position& position, int remaining_depth, int current_depth, int alpha, int beta, int root_team);
     Move get_move(Position& position, SearchInfo info = SearchInfo());
 
     int total_nodes = 0;
