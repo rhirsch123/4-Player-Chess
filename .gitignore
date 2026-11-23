@@ -1,0 +1,8 @@
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+
+# C++ build outputs
+src/*.o
+src/uci
+src/uci.exe

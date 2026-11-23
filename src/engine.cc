@@ -24,11 +24,13 @@ void Engine::unmake_move(Position& position) {
 
 int Engine::negamax(Position& position, int remaining_depth, int current_depth, int alpha, int beta) {
     // TODO: negamax search with alpha beta pruning     
+    return 0;
 }
 
 
 Move Engine::get_move(Position& position, SearchInfo info) {
     // TODO: iterative deepening
+    return Move();
 }
 
 

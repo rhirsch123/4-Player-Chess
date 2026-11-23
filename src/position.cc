@@ -1,3 +1,4 @@
+#include <cstring>
 #include "position.h"
 
 void Position::set_fen(std::string fen) {

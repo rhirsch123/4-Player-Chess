@@ -8,8 +8,8 @@ TARGETS = uci
 
 all: $(TARGETS)
 
-uci: uci.o $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^
+$(TARGETS): uci.o $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^ -static
 
 %.o: %.cc
 	$(CC) $(CFLAGS) -c $< -o $@
