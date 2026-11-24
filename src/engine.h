@@ -14,13 +14,18 @@ public:
     float evaluation_v1(Position& position);
     float evaluation_v2(Position& position);
     float evaluation_v3(Position& position);
+    int evaluation(Position& position);
     void make_move(Position& position, Move move, int ply);
     void unmake_move(Position& position);
 
-    int negamax(Position& position, int remaining_depth, int current_depth, int alpha, int beta, int root_team);
+    int negamax(Position& position, int remaining_depth, int current_depth, int alpha, int beta);
     Move get_move(Position& position, SearchInfo info = SearchInfo());
 
     int total_nodes = 0;
+    Move principal_move;
+    bool stop_search = false;
+    time_point search_deadline;
+    int node_limit = 0;
 };
 
 #endif

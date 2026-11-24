@@ -1,5 +1,6 @@
 #include "engine.h"
 #include <cmath>
+#include <algorithm>
 
 Engine::Engine() {
     init();
@@ -265,64 +266,51 @@ void Engine::unmake_move(Position& position) {
     position.pop();
 }
 
-int Engine::negamax(Position& position, int remaining_depth, int current_depth, int alpha, int beta, int root_team) {
+int Engine::evaluation(Position& position) {
+    return static_cast<int>(std::round(evaluation_v3(position)));
+}
+
+int Engine::negamax(Position& position, int remaining_depth, int current_depth, int alpha, int beta) {
+    if (stop_search ||
+        (node_limit > 0 && total_nodes >= node_limit) ||
+        (search_deadline.time_since_epoch().count() > 0 &&
+         std::chrono::high_resolution_clock::now() >= search_deadline)) {
+        stop_search = true;
+        return 0;
+    }
+
     if (remaining_depth == 0) {
-        int score = evaluation(position);
-        return get_team(position.turn) == root_team ? score : -score;
+        return evaluation(position);
     }
 
     MoveList moves;
     get_legal_moves(position, &moves);
 
     if (moves.size == 0) {
-        int score = evaluation(position);
-        return get_team(position.turn) == root_team ? score : -score;
+        return evaluation(position);
     }
 
-    bool maximizing = get_team(position.turn) == root_team;
-
-    if (maximizing) {
-        int best_score = -INF;
-
-        for (Move move : moves) {
-            make_move(position, move, current_depth);
-            int score = negamax(position, remaining_depth - 1, current_depth + 1, alpha, beta, root_team);
-            unmake_move(position);
-
-            if (score > best_score) {
-                best_score = score;
-            }
-
-            if (best_score > alpha) {
-                alpha = best_score;
-            }
-
-            if (alpha >= beta) {
-                break;
-            }
-        }
-
-        return best_score;
-    }
-
-    int best_score = INF;
+    int best_score = -INF;
+    Move best_move = moves.moves[0];
 
     for (Move move : moves) {
         make_move(position, move, current_depth);
-        int score = negamax(position, remaining_depth - 1, current_depth + 1, alpha, beta, root_team);
+        int score = -negamax(position, remaining_depth - 1, current_depth + 1, -beta, -alpha);
         unmake_move(position);
 
-        if (score < best_score) {
+        if (score > best_score) {
             best_score = score;
+            best_move = move;
         }
 
-        if (best_score < beta) {
-            beta = best_score;
-        }
-
+        alpha = std::max(alpha, best_score);
         if (alpha >= beta) {
             break;
         }
+    }
+
+    if (current_depth == 0) {
+        principal_move = best_move;
     }
 
     return best_score;
@@ -336,32 +324,36 @@ Move Engine::get_move(Position& position, SearchInfo info) {
         return Move();
     }
 
-    int depth = info.fixed_depth ? info.depth : 3;
-    if (depth < 1) {
-        depth = 1;
-    }
-
-    if (depth > MAX_DEPTH) {
-        depth = MAX_DEPTH;
-    }
-
     total_nodes = 0;
-    int root_team = get_team(position.turn);
-    Move best_move = moves.moves[0];
-    int best_score = -INF;
+    stop_search = false;
+    node_limit = info.fixed_nodes ? info.nodes : 0;
+    search_deadline = time_point();
+    if (info.fixed_time) {
+        int time_ms = std::max(info.movetime, 1);
+        search_deadline = std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(time_ms);
+    } else if (info.timed_game) {
+        int time_ms = info.time_left / 50 + info.increment;
+        time_ms = std::max(time_ms, 1);
+        search_deadline = std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(time_ms);
+    }
+    principal_move = moves.moves[0];
+    Move completed_move = principal_move;
 
-    for (Move move : moves) {
-        make_move(position, move, 0);
-        int score = negamax(position, depth - 1, 1, -INF, INF, root_team);
-        unmake_move(position);
+    int max_depth = info.fixed_depth ? info.depth : 3;
+    if (info.fixed_time || info.fixed_nodes || info.timed_game) {
+        max_depth = MAX_DEPTH;
+    }
+    max_depth = std::max(1, std::min(max_depth, MAX_DEPTH));
 
-        if (score > best_score) {
-            best_score = score;
-            best_move = move;
+    for (int depth = 1; depth <= max_depth; depth++) {
+        negamax(position, depth, 0, -INF, INF);
+        if (stop_search) {
+            break;
         }
+        completed_move = principal_move;
     }
 
-    return best_move;
+    return completed_move;
 }
 
 void Engine::init() {
